@@ -1,0 +1,505 @@
+{
+  "name": "Assignment 3 - Sub-Workflow 3 - AI Assignment Evaluation",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1vG9KPjRNj9JUfk35l13AYnO2yaxsoAsZ",
+          "mode": "list",
+          "cachedResultName": "Assignment Submissions",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1vG9KPjRNj9JUfk35l13AYnO2yaxsoAsZ"
+        },
+        "event": "fileUpdated",
+        "options": {}
+      },
+      "id": "5bb9c0a5-b372-4cae-8f47-ddf79f09296f",
+      "name": "Google Drive Trigger - New Submission",
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "2hiCrG9HD0bXpjtJ",
+          "name": "Google Drive account"
+        }
+      },
+      "onError": "continueErrorOutput",
+      "notes": "Triggers when a new assignment document is uploaded to the 'Submissions' folder"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "35886be2-6c3c-4c26-99a7-3d678912e848",
+      "name": "Google Drive - Download Submission File",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "2hiCrG9HD0bXpjtJ",
+          "name": "Google Drive account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "id": "0d5a2a61-bf02-4daf-ae21-f1df84bc5a2f",
+      "name": "Extract Submission Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        464,
+        64
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "studentName",
+              "value": "={{ $('Google Drive Trigger - New Submission').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "fileId",
+              "value": "={{ $('Google Drive Trigger - New Submission').item.json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "studentEmail",
+              "value": "={{ $('Google Drive Trigger - New Submission').item.json.lastModifyingUser?.emailAddress || $('Google Drive Trigger - New Submission').item.json.owners?.[0]?.emailAddress }}",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "aiScore",
+              "value": "={{ Number($json.output[0].content[0].text.match(/\\d+/)?.[0] || 0) }}",
+              "type": "number"
+            },
+            {
+              "id": "s5",
+              "name": "aiFeedback",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "s6",
+              "name": "evaluatedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c9f39c01-f399-46d4-9998-3affa634a624",
+      "name": "Edit Fields - Extract Score & Feedback",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1E8L22P_Efg2UTAVNIYbxjFsABb26GFiRxuzMkATehd0",
+          "mode": "list",
+          "cachedResultName": "Assignment Evaluation Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1E8L22P_Efg2UTAVNIYbxjFsABb26GFiRxuzMkATehd0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1E8L22P_Efg2UTAVNIYbxjFsABb26GFiRxuzMkATehd0/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Student ID": "={{ $json.fileId }}",
+            "Student Name": "={{ $json.studentName }}",
+            "Email": "={{ $json.studentEmail }}",
+            "Assignment Title": "={{ $json.studentName }}",
+            "Score": "={{ $json.aiScore }}",
+            "Feedback": "={{ $json.aiFeedback }}",
+            "Evaluated At": "={{ $json.evaluatedAt }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Student ID",
+              "displayName": "Student ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Student Name",
+              "displayName": "Student Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Assignment Title",
+              "displayName": "Assignment Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Feedback",
+              "displayName": "Feedback",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Evaluated At",
+              "displayName": "Evaluated At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "403afac2-42be-41b5-9418-b4e592236224",
+      "name": "Google Sheets - Append Evaluation Result",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DkdO3L0wIswWV96R",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "=Your Assignment Evaluation Result - Score: {{ $json.Score }}/100",
+        "message": "=<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #333333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; padding: 20px; border-radius: 8px;\">\n  <h2 style=\"color: #1a73e8; margin-top: 0;\">Assignment Evaluation Result</h2>\n  \n  <p>Dear <b>{{ $json['Student Name'] }}</b>,</p>\n  \n  <p>Your recent assignment submission has been evaluated. Here are your results:</p>\n  \n  <table style=\"width: 100%; border-collapse: collapse; margin: 20px 0; background-color: #f9f9f9;\">\n    <tr>\n      <td style=\"padding: 10px; border: 1px solid #dddddd; font-weight: bold; width: 30%;\">Assignment:</td>\n      <td style=\"padding: 10px; border: 1px solid #dddddd;\">{{ $json['Assignment Title'] }}</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px; border: 1px solid #dddddd; font-weight: bold;\">Score:</td>\n      <td style=\"padding: 10px; border: 1px solid #dddddd; font-weight: bold; color: #1a73e8;\">{{ $json.Score }} / 100</td>\n    </tr>\n    <tr>\n      <td style=\"padding: 10px; border: 1px solid #dddddd; font-weight: bold; vertical-align: top;\">Feedback:</td>\n      <td style=\"padding: 10px; border: 1px solid #dddddd;\">{{ $json.Feedback }}</td>\n    </tr>\n  </table>\n\n  <p style=\"margin-bottom: 0;\">Best regards,<br><b>Course Evaluation Team</b></p>\n</div>",
+        "options": {}
+      },
+      "id": "f487e1e7-1e36-4995-81e9-2296a15d1c9b",
+      "name": "Gmail - Send Score & Feedback",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1440,
+        0
+      ],
+      "webhookId": "484153c1-7c70-4cc5-bd85-160c5a78288b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6LlIlLBsANmTTIIr",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "id": "45fa852b-edfa-4346-a4c6-5d83f6209b4b",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        720,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "failedNode",
+              "value": "={{ $json.execution?.lastNodeExecuted }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "errorMessage",
+              "value": "={{ $json.execution?.error?.message }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "workflowName",
+              "value": "={{ $json.workflow?.name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2e7a222f-6316-421d-971e-45b4ed365515",
+      "name": "Format Error Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "f20230442@hyderabad.bits-pilani.ac.in",
+        "subject": "=[Alert] AI Assignment Evaluation Workflow Failed - {{ $json.workflowName }}",
+        "emailType": "text",
+        "message": "=A failure occurred in the AI Assignment Evaluation workflow.\n\nFailed Node: {{ $json.failedNode }}\nError Message: {{ $json.errorMessage }}\n\nPlease check the execution log in n8n for full details.",
+        "options": {}
+      },
+      "id": "02eecdb7-970b-4a8c-84bc-18ae1ad5f41b",
+      "name": "Gmail - Notify Admin on Error",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        272
+      ],
+      "webhookId": "5d54290e-b099-4bd7-bb94-cbc59b0f93ac",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6LlIlLBsANmTTIIr",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Evaluate the following student assignment submission out of 100 and provide 2-3 sentences of constructive feedback. Return your response in this exact format:\nScore: [number]\nFeedback: [feedback text]\n\nAssignment Submission:\n{{ $json.text }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "id": "e15d692b-a51b-4d73-bd60-c93c3c3f5a89",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "JL9sWmmXEpYqIKJX",
+          "name": "OpenAI account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger - New Submission": {
+      "main": [
+        [
+          {
+            "node": "Google Drive - Download Submission File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive - Download Submission File": {
+      "main": [
+        [
+          {
+            "node": "Extract Submission Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields - Extract Score & Feedback": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Append Evaluation Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Append Evaluation Result": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Send Score & Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Notify Admin on Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Submission Text": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields - Extract Score & Feedback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "944feb9e-8212-461d-b2c6-67c70585c0c3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6241138c3d8a57be3db9a2fbd997139401fd734138c8e183fcc12eeecf716752"
+  },
+  "nodeGroups": [],
+  "id": "reDwCxfdq1Jdrqwy",
+  "tags": [
+    {
+      "updatedAt": "2026-07-22T16:00:00.999Z",
+      "createdAt": "2026-07-22T16:00:00.999Z",
+      "id": "YVUSpLjGvWnp9n3I",
+      "name": "Assignment3"
+    },
+    {
+      "updatedAt": "2026-07-22T16:00:45.936Z",
+      "createdAt": "2026-07-22T16:00:45.936Z",
+      "id": "dzDS1yw8BqY2joks",
+      "name": "AIEvaluation"
+    }
+  ]
+}

@@ -1,0 +1,306 @@
+{
+  "name": "Assignment 3: Sub-Workflow 4 - Scheduled Grade Processing",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 17 * * 5"
+            }
+          ]
+        }
+      },
+      "id": "d36d01be-1763-48bb-8f49-d836a974e172",
+      "name": "Schedule Trigger - Every Friday 5PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -896,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1E8L22P_Efg2UTAVNIYbxjFsABb26GFiRxuzMkATehd0",
+          "mode": "list",
+          "cachedResultName": "Assignment Evaluation Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1E8L22P_Efg2UTAVNIYbxjFsABb26GFiRxuzMkATehd0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1E8L22P_Efg2UTAVNIYbxjFsABb26GFiRxuzMkATehd0/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "5f656144-8605-4bfb-bdd7-8cf426ca8d6f",
+      "name": "Read Grades Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -688,
+        160
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DkdO3L0wIswWV96R",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate class average and classify each student's grade status\nconst items = $input.all();\n\nif (items.length === 0) {\n  return [];\n}\n\n// Parse numeric grades, defaulting invalid/missing values to 0\nconst grades = items.map(item => {\n  const raw = item.json.Grade ?? item.json.grade ?? item.json.Score ?? item.json.score;\n  const num = parseFloat(raw);\n  return isNaN(num) ? 0 : num;\n});\n\nconst classAverage = grades.reduce((sum, g) => sum + g, 0) / grades.length;\n\n// Classify each student\nconst results = items.map((item, index) => {\n  const grade = grades[index];\n  let gradeStatus;\n\n  if (grade >= 90) {\n    gradeStatus = 'Distinction';\n  } else if (grade >= 50) {\n    gradeStatus = 'Pass';\n  } else {\n    gradeStatus = 'Fail';\n  }\n\n  return {\n    json: {\n      ...item.json,\n      grade: grade,\n      classAverage: Math.round(classAverage * 100) / 100,\n      gradeStatus: gradeStatus\n    }\n  };\n});\n\nreturn results;"
+      },
+      "id": "27114811-9d4c-4190-bfc7-62eca07fa4a5",
+      "name": "Calculate Averages & Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -464,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "cond-distinction",
+                    "leftValue": "={{ $json.gradeStatus }}",
+                    "rightValue": "Distinction",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Distinction"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "cond-pass",
+                    "leftValue": "={{ $json.gradeStatus }}",
+                    "rightValue": "Pass",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Pass"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "cond-fail",
+                    "leftValue": "={{ $json.gradeStatus }}",
+                    "rightValue": "Fail",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Fail"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "none"
+        }
+      },
+      "id": "66700bf5-7c8b-438e-8709-84c15184f28d",
+      "name": "Switch - Grade Status",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -240,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email || $json.email }}",
+        "subject": "=Weekly Academic Summary - {{ $json.gradeStatus }} - {{ $json['Student Name'] }}",
+        "message": "=Dear {{ $json['Student Name'] }},<br><br>Here is your weekly academic summary:<br><br><b>Grade:</b> {{ $json.grade }}<br><b>Status:</b> {{ $json.gradeStatus }}<br><b>Class Average:</b> {{ $json.classAverage }}<br><br>Keep up the great work!<br><br>Best regards.",
+        "options": {}
+      },
+      "id": "309be1cf-15db-4e13-9b67-2ca2815d9941",
+      "name": "Send Summary Email - Distinction",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "6a486a2a-187c-43a6-b207-3da0a9c25f13",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6LlIlLBsANmTTIIr",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email || $json.email }}",
+        "subject": "=Weekly Academic Summary - {{ $json.gradeStatus }} - {{ $json['Student Name'] }}",
+        "message": "=Dear {{ $json['Student Name'] }},<br><br>Here is your weekly academic summary:<br><br><b>Grade:</b> {{ $json.grade }} / 100<br><b>Status:</b> {{ $json.gradeStatus }}<br><b>Class Average:</b> {{ $json.classAverage }}<br><br><b>Feedback:</b><br>{{ $json.Feedback }}<br><br>Good job on completing your assignment! Keep up the solid effort.<br><br>Best regards,<br>Course Evaluation Team",
+        "options": {}
+      },
+      "id": "dcae4e73-baf7-4217-a9b6-b6f5f4bc5a92",
+      "name": "Send Summary Email - Pass",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        160
+      ],
+      "webhookId": "4f5cf83e-bbb7-48cc-a867-40f223bbd93a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6LlIlLBsANmTTIIr",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email || $json.email }}",
+        "subject": "=Weekly Academic Summary - {{ $json.gradeStatus }} - {{ $json['Student Name'] }}",
+        "message": "=Dear {{ $json['Student Name'] }},<br><br>Here is your weekly academic summary:<br><br><b>Grade:</b> {{ $json.grade }} / 100<br><b>Status:</b> {{ $json.gradeStatus }}<br><b>Class Average:</b> {{ $json.classAverage }}<br><br><b>Feedback:</b><br>{{ $json.Feedback }}<br><br>Please review the feedback above. If you need extra guidance or would like to discuss ways to improve for the next submission, feel free to reach out.<br><br>Best regards,<br>Course Evaluation Team",
+        "options": {}
+      },
+      "id": "2b09685e-3f7c-42f8-b5be-7c44707ace42",
+      "name": "Send Summary Email - Fail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        320
+      ],
+      "webhookId": "fdc9f7bb-4c74-4b47-8d5e-c414c252fa21",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6LlIlLBsANmTTIIr",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger - Every Friday 5PM": {
+      "main": [
+        [
+          {
+            "node": "Read Grades Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Grades Sheet": {
+      "main": [
+        [
+          {
+            "node": "Calculate Averages & Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Averages & Status": {
+      "main": [
+        [
+          {
+            "node": "Switch - Grade Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Grade Status": {
+      "main": [
+        [
+          {
+            "node": "Send Summary Email - Distinction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Summary Email - Pass",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Summary Email - Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "cef3e087-95b1-428e-83b3-e6ef5a767ccf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6241138c3d8a57be3db9a2fbd997139401fd734138c8e183fcc12eeecf716752"
+  },
+  "nodeGroups": [],
+  "id": "9AQn1KScsp2nN9h0",
+  "tags": []
+}

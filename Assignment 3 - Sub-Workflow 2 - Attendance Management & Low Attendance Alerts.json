@@ -1,0 +1,434 @@
+{
+  "name": "Assignment 3 - Sub-Workflow 2 - Attendance Management & Low Attendance Alerts",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "attendance-log",
+        "options": {
+          "rawBody": "={{ {\n  \"studentId\": \"S101\",\n  \"studentName\": \"Aadi Narayan\",\n  \"email\": \"f20230442@hyderabad.bits-pilani.ac.in\",\n  \"classesAttended\": 12,\n  \"totalClasses\": 20\n} }}"
+        }
+      },
+      "id": "4a6348bb-3237-4663-a404-c16dd5580f6f",
+      "name": "Webhook - Receive Attendance Log",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -976,
+        128
+      ],
+      "webhookId": "attendance-log-webhook",
+      "notesInFlow": true,
+      "onError": "continueErrorOutput",
+      "notes": "Receives POST: Student ID, Classes Attended, Total Classes"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nfor (const item of $input.all()) {\n  const body = item.json.body || item.json;\n\n  const studentId = body.studentId ?? body['Student ID'];\n  const studentName = body.studentName ?? body['Student Name'] ?? '';\n  const email = body.email ?? body['Email'] ?? '';\n  const classesAttended = Number(body.classesAttended ?? body['Classes Attended'] ?? 0);\n  const totalClasses = Number(body.totalClasses ?? body['Total Classes'] ?? 0);\n\n  let attendancePercentage = 0;\n  if (totalClasses > 0) {\n    attendancePercentage = Math.round((classesAttended / totalClasses) * 10000) / 100;\n  }\n\n  items.push({\n    json: {\n      studentId,\n      studentName,\n      email,\n      classesAttended,\n      totalClasses,\n      attendancePercentage,\n      calculatedAt: new Date().toISOString()\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "b09219b5-5c38-4735-8cad-677ef310bbc3",
+      "name": "Code - Calculate Attendance Percentage",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -736,
+        128
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1_HimriKQWG0kcicy0stM1RuQOAUtmOCwZGHCjj6TRSQ",
+          "mode": "list",
+          "cachedResultName": "Student Attendance Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_HimriKQWG0kcicy0stM1RuQOAUtmOCwZGHCjj6TRSQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_HimriKQWG0kcicy0stM1RuQOAUtmOCwZGHCjj6TRSQ/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Student ID": "={{ $json.studentId }}",
+            "Classes Attended": "={{ $json.classesAttended }}",
+            "Total Classes": "={{ $json.totalClasses }}",
+            "Student Name": "={{ $json.studentName }}",
+            "Email": "={{ $json.email }}",
+            "Attendance Percentage": "={{ $json.attendancePercentage }}",
+            "Last Updated": "={{ $json.calculatedAt }}"
+          },
+          "matchingColumns": [
+            "Student ID"
+          ],
+          "schema": [
+            {
+              "id": "Student ID",
+              "displayName": "Student ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Student Name",
+              "displayName": "Student Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Classes Attended",
+              "displayName": "Classes Attended",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total Classes",
+              "displayName": "Total Classes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Attendance Percentage",
+              "displayName": "Attendance Percentage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "27717501-759d-45b2-be44-70ff38bd20d8",
+      "name": "Google Sheets - Update Attendance Record",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -496,
+        128
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DkdO3L0wIswWV96R",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-1",
+              "leftValue": "={{ $json['Attendance Percentage'] }}",
+              "rightValue": 75,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b7b82235-5321-4330-9a0b-2db7c6a31f5e",
+      "name": "If - Attendance Below 75%",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -256,
+        128
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "=Low Attendance Warning - {{ $json['Student Name'] }} ({{ $json['Student ID'] }})",
+        "message": "=<div style=\"font-family:Arial,sans-serif;line-height:1.6;\">\n  <h2 style=\"color:#c0392b;\">Low Attendance Warning</h2>\n  <p>Dear <strong>{{ $json['Student Name'] }}</strong> (ID: {{ $json['Student ID'] }}),</p>\n  <p>Your current attendance is <strong>{{ $json['Attendance Percentage'] }}%</strong> ({{ $json['Classes Attended'] }}/{{ $json['Total Classes'] }} classes attended).</p>\n  <p>This is below the required 75% threshold. Please contact your academic advisor as soon as possible.</p>\n</div>",
+        "options": {}
+      },
+      "id": "1276760a-79ac-4e2d-961e-9e760f1c91a5",
+      "name": "Gmail - Send Low Attendance Warning",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "ca0d8eda-658c-41c8-b3cb-0afd1488dd74",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6LlIlLBsANmTTIIr",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "log1",
+              "name": "logMessage",
+              "value": "=Attendance OK for Student {{ $json['Student ID'] }} ({{ $json['Student Name'] }}) - {{ $json['Attendance Percentage'] }}%",
+              "type": "string"
+            },
+            {
+              "id": "log2",
+              "name": "loggedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f226a65a-b544-4d92-9bfa-04a9cd7c3979",
+      "name": "Logger - Attendance OK",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        240
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "5aa35ac9-6cbe-4a63-acc0-b590f83a3758",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "failedNode",
+              "value": "={{ $json.execution?.lastNodeExecuted }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "errorMessage",
+              "value": "={{ $json.execution?.error?.message }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "workflowName",
+              "value": "={{ $json.workflow?.name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7a8326cf-dd58-45b4-b4d7-af980fe60891",
+      "name": "Format Error Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -256,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "f20230442@hyderabad.bits-pilani.ac.in",
+        "subject": "=[Alert] Attendance Workflow Failed - {{ $json.workflowName }}",
+        "emailType": "text",
+        "message": "=A failure occurred in the Attendance Management & Low Attendance Alerts workflow.\n\nFailed Node: {{ $json.failedNode }}\nError Message: {{ $json.errorMessage }}\n\nPlease check the execution log in n8n for full details.",
+        "options": {}
+      },
+      "id": "75bf6494-ae1e-41cb-bb54-a767ffd68ebc",
+      "name": "Gmail - Notify Admin on Error",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        448
+      ],
+      "webhookId": "cde0ecd7-90fc-42cd-afd6-da0d2abfaa15",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6LlIlLBsANmTTIIr",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Webhook - Receive Attendance Log": [
+      {
+        "json": {
+          "studentId": "S101",
+          "studentName": "Aadi Narayan",
+          "email": "f20230442@hyderabad.bits-pilani.ac.in",
+          "classesAttended": 12,
+          "totalClasses": 20
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook - Receive Attendance Log": {
+      "main": [
+        [
+          {
+            "node": "Code - Calculate Attendance Percentage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Calculate Attendance Percentage": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Update Attendance Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Update Attendance Record": {
+      "main": [
+        [
+          {
+            "node": "If - Attendance Below 75%",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - Attendance Below 75%": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Send Low Attendance Warning",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Logger - Attendance OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Notify Admin on Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "bc2a46f1-5c9d-4a41-aa90-9c156569f610",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6241138c3d8a57be3db9a2fbd997139401fd734138c8e183fcc12eeecf716752"
+  },
+  "nodeGroups": [],
+  "id": "8nKq7b5CPSWxXTXQ",
+  "tags": [
+    {
+      "updatedAt": "2026-07-22T16:00:26.527Z",
+      "createdAt": "2026-07-22T16:00:26.527Z",
+      "id": "WMLLWyh75XzNmiRU",
+      "name": "AttendanceManagement"
+    },
+    {
+      "updatedAt": "2026-07-22T16:00:00.999Z",
+      "createdAt": "2026-07-22T16:00:00.999Z",
+      "id": "YVUSpLjGvWnp9n3I",
+      "name": "Assignment3"
+    }
+  ]
+}

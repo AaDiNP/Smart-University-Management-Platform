@@ -1,0 +1,262 @@
+{
+  "name": "Assignment 3 - Sub-Workflow 1 - Student Registration & Enrollment",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "studentName",
+              "value": "={{ $json['Full Name'] || $json['Name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "rollNumber",
+              "value": "={{ $json['Roll Number  '] }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "email",
+              "value": "={{ $json['Email Address  '] }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "department",
+              "value": "={{ $json['Department'] }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "registrationTimestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c9774745-3dd9-41a6-a6d1-e3fc935eee35",
+      "name": "Edit Fields - Format Student Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        432,
+        -144
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "=Welcome to the Program, {{ $json.studentName }} - Enrollment Confirmed",
+        "message": "=<div style=\"font-family:Arial,sans-serif;line-height:1.6;\">\n  <h2>Enrollment Confirmation</h2>\n  <p>Dear {{ $json.studentName }},</p>\n  <p>Congratulations! Your registration has been successfully received and processed.</p>\n  <table style=\"border-collapse:collapse;\">\n    <tr><td style=\"padding:4px 8px;\"><b>Roll Number:</b></td><td style=\"padding:4px 8px;\">{{ $json.rollNumber }}</td></tr>\n    <tr><td style=\"padding:4px 8px;\"><b>Department:</b></td><td style=\"padding:4px 8px;\">{{ $json.department }}</td></tr>\n    <tr><td style=\"padding:4px 8px;\"><b>Registered On:</b></td><td style=\"padding:4px 8px;\">{{ $json.registrationTimestamp }}</td></tr>\n  </table>\n  <p>Welcome aboard, and we look forward to a great academic journey with you!</p>\n  <p>Best regards,<br/>Admissions Office</p>\n</div>",
+        "options": {}
+      },
+      "id": "dac33b89-d971-4078-a1ec-0121e0d50fd4",
+      "name": "Gmail - Send Welcome Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        704,
+        -144
+      ],
+      "webhookId": "d68eba01-7fce-4b07-903e-baef0742f7aa",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6LlIlLBsANmTTIIr",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "id": "bcacadfc-9d76-4c54-9647-e7dc40d5e50b",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        336,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "failedNode",
+              "value": "={{ $json.execution?.lastNodeExecuted }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "errorMessage",
+              "value": "={{ $json.execution?.error?.message }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "workflowName",
+              "value": "={{ $json.workflow?.name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "de3b3cd1-b33c-481a-bf15-bc2a134eb196",
+      "name": "Format Error Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        608,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "f20230442@hyderabad.bits-pilani.ac.in",
+        "subject": "=[Alert] Student Registration Workflow Failed - {{ $json.workflowName }}",
+        "emailType": "text",
+        "message": "=A failure occurred in the Student Registration & Enrollment workflow.\n\nFailed Node: {{ $json.failedNode }}\nError Message: {{ $json.errorMessage }}\n\nPlease check the execution log in n8n for full details.",
+        "options": {}
+      },
+      "id": "460fe416-a385-4a22-92a7-f785cd707d23",
+      "name": "Gmail - Notify Admin on Error",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        896,
+        96
+      ],
+      "webhookId": "d3ee859b-c3a9-4cd1-b592-0e441ea6e862",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6LlIlLBsANmTTIIr",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "1nCXZpHWtrHkMhOQNIwxMujvf08BgleJWjbkG-31HH2w",
+          "mode": "list",
+          "cachedResultName": "Smart University Enrollment(Responses)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nCXZpHWtrHkMhOQNIwxMujvf08BgleJWjbkG-31HH2w/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 205252156,
+          "mode": "list",
+          "cachedResultName": "Form Responses 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nCXZpHWtrHkMhOQNIwxMujvf08BgleJWjbkG-31HH2w/edit#gid=205252156"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        224,
+        -160
+      ],
+      "id": "5723fc3f-c25c-42b7-bdcb-3b9344285ba5",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "y8ynWawVsIZSQ8bk",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Edit Fields - Format Student Details": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Send Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Notify Admin on Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields - Format Student Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2d4510aa-7701-4945-a988-a6e726286852",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6241138c3d8a57be3db9a2fbd997139401fd734138c8e183fcc12eeecf716752"
+  },
+  "nodeGroups": [],
+  "id": "WGoBD9KpJ2Dc9pFZ",
+  "tags": [
+    {
+      "updatedAt": "2026-07-22T16:00:00.989Z",
+      "createdAt": "2026-07-22T16:00:00.989Z",
+      "id": "P85Y24wLAQQAMYBS",
+      "name": "StudentRegistration"
+    },
+    {
+      "updatedAt": "2026-07-22T16:00:00.999Z",
+      "createdAt": "2026-07-22T16:00:00.999Z",
+      "id": "YVUSpLjGvWnp9n3I",
+      "name": "Assignment3"
+    }
+  ]
+}

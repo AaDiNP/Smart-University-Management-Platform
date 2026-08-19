@@ -1,0 +1,242 @@
+{
+  "name": "Assignment 3: Sub-Workflow 5 - Global Error Handler & Audit Log",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d9b79dd6-d8c2-463d-b358-752a42876892",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-workflow-name",
+              "name": "workflowName",
+              "type": "string",
+              "value": "={{ $json.workflow.name }}"
+            },
+            {
+              "id": "assign-workflow-id",
+              "name": "workflowId",
+              "type": "string",
+              "value": "={{ $json.workflow.id }}"
+            },
+            {
+              "id": "assign-execution-id",
+              "name": "executionId",
+              "type": "string",
+              "value": "={{ $json.execution.id }}"
+            },
+            {
+              "id": "assign-execution-url",
+              "name": "executionUrl",
+              "type": "string",
+              "value": "={{ $json.execution.url }}"
+            },
+            {
+              "id": "assign-error-message",
+              "name": "errorMessage",
+              "type": "string",
+              "value": "={{ $json.execution.error?.message || $json.execution.lastNodeExecuted || 'Unknown error' }}"
+            },
+            {
+              "id": "assign-error-node",
+              "name": "failedNode",
+              "type": "string",
+              "value": "={{ $json.execution.lastNodeExecuted }}"
+            },
+            {
+              "id": "assign-timestamp",
+              "name": "timestamp",
+              "type": "string",
+              "value": "={{ $now.toISO() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5bb18feb-0b45-4610-986e-51c8407c23fb",
+      "name": "Extract Error Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1E8L22P_Efg2UTAVNIYbxjFsABb26GFiRxuzMkATehd0",
+          "mode": "list",
+          "cachedResultName": "Assignment Evaluation Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1E8L22P_Efg2UTAVNIYbxjFsABb26GFiRxuzMkATehd0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 776777521,
+          "mode": "list",
+          "cachedResultName": "Sheet2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1E8L22P_Efg2UTAVNIYbxjFsABb26GFiRxuzMkATehd0/edit#gid=776777521"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Workflow Name": "={{ $json.workflowName }}",
+            "Error Message": "={{ $json.errorMessage }}",
+            "Failed Node": "={{ $json.failedNode }}",
+            "Timestamp": "={{ $json.timestamp }}",
+            "Execution URL": "={{ $json.executionUrl }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Workflow Name",
+              "displayName": "Workflow Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Failed Node",
+              "displayName": "Failed Node",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error Message",
+              "displayName": "Error Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Execution URL",
+              "displayName": "Execution URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f5f8f4e2-d5d3-41cf-b12e-0f2b9f14f82c",
+      "name": "Append to Audit_Logs",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DkdO3L0wIswWV96R",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "f20230442@hyderabad.bits-pilani.ac.in",
+        "subject": "=🚨 n8n Workflow Failure: {{ $json['Workflow Name'] }}",
+        "message": "=A workflow execution has failed.<br><br><b>Workflow:</b> {{ $json['Workflow Name'] }}<br><b>Failed Node:</b> {{ $json['Failed Node'] }}<br><b>Error Message:</b> {{ $json['Error Message'] }}<br><b>Timestamp:</b> {{ $json.Timestamp }}<br><br><b>Execution Log:</b> <a href=\"{{ $json['Execution URL'] }}\">{{ $json['Execution URL'] }}</a><br><br>Please investigate as soon as possible.<br><br>- n8n Automated Error Handler",
+        "options": {}
+      },
+      "id": "e2d35ed0-7136-4b71-a6d6-5018d85e4472",
+      "name": "Alert System Admin",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        0
+      ],
+      "webhookId": "6d933d42-aa6d-4e1f-897d-37744ea66168",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "6LlIlLBsANmTTIIr",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Error Details": {
+      "main": [
+        [
+          {
+            "node": "Append to Audit_Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Audit_Logs": {
+      "main": [
+        [
+          {
+            "node": "Alert System Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "711d92ab-55b9-4369-8375-cd2f3c83166a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6241138c3d8a57be3db9a2fbd997139401fd734138c8e183fcc12eeecf716752"
+  },
+  "nodeGroups": [],
+  "id": "zrJceHWPZRMPhTYM",
+  "tags": []
+}
